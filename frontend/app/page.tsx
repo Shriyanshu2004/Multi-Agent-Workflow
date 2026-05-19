@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { createParser } from "eventsource-parser";
 import ResearchForm from "@/components/ResearchForm";
 import AgentStatusPanel from "@/components/AgentStatusPanel";
 import MarkdownReport from "@/components/MarkdownReport";
@@ -187,23 +186,26 @@ export default function HomePage() {
         // ── Parse SSE stream ──────────────────────────────────────────
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        const parser = createParser({
-          onEvent: (e) => {
-            if (e.data) {
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6).trim();
+              if (!data) continue;
               try {
-                const parsed = JSON.parse(e.data) as ResearchEvent;
+                const parsed = JSON.parse(data) as ResearchEvent;
                 handleEvent(parsed);
               } catch {
                 // ignore malformed events
               }
             }
-          },
-        });
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          parser.feed(decoder.decode(value, { stream: true }));
+          }
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;

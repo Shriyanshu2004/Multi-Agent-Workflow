@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { createParser, type ParsedEvent } from "eventsource-parser";
+import { createParser } from "eventsource-parser";
 import ResearchForm from "@/components/ResearchForm";
 import AgentStatusPanel from "@/components/AgentStatusPanel";
 import MarkdownReport from "@/components/MarkdownReport";
@@ -187,15 +187,17 @@ export default function HomePage() {
         // ── Parse SSE stream ──────────────────────────────────────────
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        const parser = createParser((e: ParsedEvent) => {
-          if (e.type === "event" || e.data) {
-            try {
-              const parsed = JSON.parse(e.data) as ResearchEvent;
-              handleEvent(parsed);
-            } catch {
-              // ignore malformed events
+        const parser = createParser({
+          onEvent: (e) => {
+            if (e.data) {
+              try {
+                const parsed = JSON.parse(e.data) as ResearchEvent;
+                handleEvent(parsed);
+              } catch {
+                // ignore malformed events
+              }
             }
-          }
+          },
         });
 
         while (true) {

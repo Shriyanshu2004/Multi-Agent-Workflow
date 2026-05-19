@@ -7,8 +7,7 @@ python-multipart>=0.0.9
 starlette>=0.37.2,<0.42.0
 
 # ─── CrewAI 1.x — pinned exact version ───────────────────────────────────────
-# CrewAI 1.14.5 requires openai>=2.30.0 (OpenAI SDK v2)
-crewai==1.14.5
+crewai[google-genai]==1.14.5
 crewai-tools==1.14.5
 
 # ─── OpenAI SDK v2 (required by crewai 1.14.5) ───────────────────────────────

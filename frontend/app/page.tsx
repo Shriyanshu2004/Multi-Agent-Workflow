@@ -187,17 +187,15 @@ export default function HomePage() {
         // ── Parse SSE stream ──────────────────────────────────────────
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        const parser = createParser({
-          onEvent(e: ParsedEvent) {
-            if (e.type === "event" || e.data) {
-              try {
-                const parsed = JSON.parse(e.data) as ResearchEvent;
-                handleEvent(parsed);
-              } catch {
-                // ignore malformed events
-              }
+        const parser = createParser((e: ParsedEvent) => {
+          if (e.type === "event" || e.data) {
+            try {
+              const parsed = JSON.parse(e.data) as ResearchEvent;
+              handleEvent(parsed);
+            } catch {
+              // ignore malformed events
             }
-          },
+          }
         });
 
         while (true) {

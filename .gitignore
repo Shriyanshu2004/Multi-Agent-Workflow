@@ -12,6 +12,7 @@ build/
 .eggs/
 venv/
 .venv/
+.venv313/
 env/
 .env
 backend/.env

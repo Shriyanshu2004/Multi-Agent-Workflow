@@ -18,11 +18,11 @@ from tools import search_tool
 # LLM configuration — shared across all agents
 # ---------------------------------------------------------------------------
 def _build_llm() -> LLM:
-    model = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+    model = os.getenv("LLM_MODEL_NAME", "groq/llama-3.1-8b-instant")
     return LLM(
-        model=f"openai/{model}",
+        model=model,
         temperature=0.3,
-        max_tokens=4096,
+        max_tokens=2048,
     )
 
 

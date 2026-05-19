@@ -8,7 +8,7 @@ Three specialized CrewAI agents collaborate in real-time — searching the web, 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Shriyanshu2004/Multi-Agent-Workflow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
-[![CrewAI](https://img.shields.io/badge/CrewAI-0.30-purple)](https://crewai.com)
+[![CrewAI](https://img.shields.io/badge/CrewAI-1.14-purple)](https://crewai.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green?logo=fastapi)](https://fastapi.tiangolo.com)
 
 </div>
@@ -31,7 +31,7 @@ Three specialized CrewAI agents collaborate in real-time — searching the web, 
 | ⚡ **Live SSE Streaming** | Real-time agent progress streamed via Server-Sent Events |
 | 📋 **Rich Markdown Output** | GFM tables, syntax-highlighted code, copy + download buttons |
 | 🌙 **Dark Glassmorphism UI** | Animated gradient backgrounds, glass cards, micro-animations |
-| 🚀 **Vercel-Ready** | One-click deployment as a Python + Node.js monorepo |
+| 🆓 **Free LLM via Groq** | Powered by Llama 3.1 8B on Groq — no credit card required |
 
 ---
 
@@ -53,13 +53,13 @@ flowchart TD
     end
 
     Serper["🔍 Serper API\n(Google Search)"]
-    OpenAI["🧠 OpenAI GPT-4o-mini"]
+    Groq["🦙 Groq API\n(Llama 3.1 8B Instant)"]
     Report["📊 Markdown Briefing\n(Rendered in browser)"]
 
     User --> Form --> Route --> FastAPI
     FastAPI --> A1
     A1 <-->|Search queries| Serper
-    A1 & A2 & A3 <-->|LLM calls| OpenAI
+    A1 & A2 & A3 <-->|LLM calls| Groq
     A3 -->|SSE: complete event| FastAPI
     FastAPI -->|SSE stream| Route
     Route -->|SSE stream| User
@@ -87,7 +87,7 @@ multi-agent-research-system/
 │   │   └── types.ts             # TypeScript types for SSE events
 │   ├── package.json
 │   ├── tailwind.config.ts
-│   └── next.config.ts
+│   └── next.config.mjs
 │
 ├── backend/                     # FastAPI + CrewAI
 │   ├── main.py                  # FastAPI app + SSE endpoint
@@ -95,8 +95,12 @@ multi-agent-research-system/
 │   ├── tasks.py                 # Task descriptions + context chaining
 │   ├── tools.py                 # SerperDevTool wrapper
 │   ├── crew.py                  # Crew assembly + async stream generator
-│   └── requirements.txt
+│   ├── requirements.txt
+│   ├── .env.example             # Environment variable template
+│   └── .env                     # Your local secrets (git-ignored)
 │
+├── package.json                 # Root — runs both servers via concurrently
+├── start-backend.cmd            # Windows helper script for backend startup
 ├── vercel.json                  # Monorepo routing config
 ├── .gitignore
 └── README.md
@@ -109,9 +113,9 @@ multi-agent-research-system/
 ### Prerequisites
 
 - **Node.js** ≥ 18.x ([download](https://nodejs.org))
-- **Python** ≥ 3.10 ([download](https://python.org))
+- **Python** 3.10–3.13 ([download](https://python.org)) — **Python 3.14 is not supported yet**
 - **API Keys**:
-  - `OPENAI_API_KEY` — [platform.openai.com](https://platform.openai.com/api-keys)
+  - `GROQ_API_KEY` — [console.groq.com](https://console.groq.com) (free, no credit card)
   - `SERPER_API_KEY` — [serper.dev](https://serper.dev) (free tier: 2,500 searches/month)
 
 ---
@@ -128,61 +132,74 @@ cd Multi-Agent-Workflow
 ```bash
 cd backend
 
-# Create and activate a virtual environment
-python -m venv .venv
+# Create virtual environment with Python 3.13
 # Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
+py -3.13 -m venv .venv313
+.venv313\Scripts\pip install -r requirements.txt
 
-# Install dependencies
+# macOS/Linux:
+python3.13 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
 # Configure environment variables
 cp .env.example .env
 # Open .env and fill in your API keys:
-#   OPENAI_API_KEY=sk-...
+#   GROQ_API_KEY=gsk_...
 #   SERPER_API_KEY=...
 ```
 
-### Step 3 — Start the FastAPI Backend
+### Step 3 — Install Root Dependencies
 
 ```bash
-# From the /backend directory (with venv activated)
-python main.py
-# → Running on http://localhost:8000
-# → API docs at http://localhost:8000/api/docs
-```
-
-### Step 4 — Set Up the Next.js Frontend
-
-```bash
-# In a new terminal tab
-cd frontend
-
-# Install Node dependencies
+# From the project root
+cd ..
 npm install
-
-# Configure environment variables
-cp .env.local.example .env.local
-# .env.local already contains: NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```
 
-### Step 5 — Start the Frontend
+### Step 4 — Run Both Servers (Single Command)
 
 ```bash
-# From /frontend
+# From the project root — starts backend + frontend together
+npm run dev
+```
+
+Or run them separately:
+
+```bash
+# Terminal 1 — Backend (from /backend)
+# Windows:
+.venv313\Scripts\python.exe main.py
+# macOS/Linux:
+.venv/bin/python main.py
+# → Running on http://localhost:8000
+
+# Terminal 2 — Frontend (from /frontend)
 npm run dev
 # → Running on http://localhost:3000
 ```
 
-### Step 6 — Use the App
+### Step 5 — Use the App
 
 1. Open [http://localhost:3000](http://localhost:3000)
 2. Type a research topic (e.g., *"Generative AI in Finance 2025"*)
 3. Click **Generate Briefing**
 4. Watch the 3 agents activate in real-time
 5. Read, copy, or download your Corporate Intelligence Briefing 🎉
+
+---
+
+## 🔑 Environment Variables
+
+Copy `backend/.env.example` to `backend/.env` and fill in:
+
+| Variable | Required | Description | Where to get |
+|----------|----------|-------------|--------------|
+| `GROQ_API_KEY` | ✅ | Groq API key | [console.groq.com](https://console.groq.com) |
+| `SERPER_API_KEY` | ✅ | Serper (Google Search) key | [serper.dev](https://serper.dev) |
+| `LLM_MODEL_NAME` | ⚙️ | LLM model (default: `groq/llama-3.1-8b-instant`) | — |
+| `ALLOWED_ORIGINS` | ⚙️ | CORS origins | `http://localhost:3000` |
+| `BACKEND_PORT` | ⚙️ | Backend port (default: `8000`) | — |
 
 ---
 
@@ -195,33 +212,17 @@ npm run dev
 ### Option B — Manual Deployment
 
 ```bash
-# Install Vercel CLI
 npm i -g vercel
-
-# From the project root
 vercel
 
-# Follow prompts, then set environment variables:
-vercel env add OPENAI_API_KEY
+# Set environment variables:
+vercel env add GROQ_API_KEY
 vercel env add SERPER_API_KEY
-vercel env add NEXT_PUBLIC_BACKEND_URL   # set to your Vercel deployment URL
-vercel env add ALLOWED_ORIGINS           # set to your Vercel deployment URL
+vercel env add NEXT_PUBLIC_BACKEND_URL   # your Vercel deployment URL
+vercel env add ALLOWED_ORIGINS           # your Vercel deployment URL
 
-# Deploy to production
 vercel --prod
 ```
-
-### Required Environment Variables
-
-Set these in **Vercel Dashboard → Project → Settings → Environment Variables**:
-
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `OPENAI_API_KEY` | ✅ | OpenAI API key | `sk-proj-...` |
-| `SERPER_API_KEY` | ✅ | Serper (Google Search) key | `abc123...` |
-| `NEXT_PUBLIC_BACKEND_URL` | ✅ | URL of your deployed backend | `https://your-app.vercel.app` |
-| `ALLOWED_ORIGINS` | ✅ | CORS allowed origins | `https://your-app.vercel.app` |
-| `OPENAI_MODEL_NAME` | ⚙️ | LLM model (default: gpt-4o-mini) | `gpt-4o` |
 
 ---
 
@@ -232,9 +233,8 @@ Set these in **Vercel Dashboard → Project → Settings → Environment Variabl
 | Property | Value |
 |----------|-------|
 | **Role** | Senior Research Analyst |
-| **Tool** | `SerperDevTool` (Google Search, 10 results) |
+| **Tool** | `SerperDevTool` (Google Search) |
 | **Goal** | Gather 8–12 credible data points with sources and recency |
-| **LLM** | GPT-4o-mini, temp=0.3 |
 | **Max Iterations** | 5 |
 
 ### Agent 2 — Data Synthesizer 🧠
@@ -244,7 +244,6 @@ Set these in **Vercel Dashboard → Project → Settings → Environment Variabl
 | **Role** | Intelligence Analyst |
 | **Tool** | None (pure reasoning on Task 1 output) |
 | **Goal** | Extract 5–7 trends, validate cross-references, assign confidence levels |
-| **Context** | Receives Task 1 output automatically via CrewAI context chaining |
 
 ### Agent 3 — Executive Writer ✍️
 
@@ -253,28 +252,25 @@ Set these in **Vercel Dashboard → Project → Settings → Environment Variabl
 | **Role** | Corporate Communications Director |
 | **Tool** | None (pure generation from Task 2 output) |
 | **Goal** | Produce 8-section Markdown briefing with tables, headers, and sources |
-| **Context** | Receives Task 2 output automatically via CrewAI context chaining |
 
 ---
 
-## 🔮 Future Scope & Plus-One Enhancements
+## 🔮 Future Scope
 
 ### 🔧 Short-Term
-- [ ] **Persistent History** — Store past briefings in PostgreSQL/Supabase with user accounts (NextAuth.js)
-- [ ] **PDF Export** — Server-side PDF generation via `pdfmake` or `wkhtmltopdf`
-- [ ] **Topic Presets** — Industry-specific prompt templates (VC Research, Competitive Analysis, Regulatory Scan)
+- [ ] **Persistent History** — Store past briefings in PostgreSQL/Supabase
+- [ ] **PDF Export** — Server-side PDF generation
+- [ ] **Topic Presets** — Industry-specific prompt templates
 
 ### 🚀 Medium-Term
-- [ ] **Parallel Agent Execution** — Switch `Process.sequential` → `Process.hierarchical` with a Manager LLM for 2× speed
-- [ ] **Custom Tool Registry** — Allow users to plug in their own search APIs (Tavily, Exa.ai, Brave Search)
-- [ ] **Source Citation Links** — Hyperlink every claim in the briefing back to its original source URL
-- [ ] **Briefing Comparison** — Run the same topic at T1 and T2, highlight what changed (delta analysis)
+- [ ] **Parallel Agent Execution** — Hierarchical process with Manager LLM
+- [ ] **Custom Tool Registry** — Plug in Tavily, Exa.ai, Brave Search
+- [ ] **Source Citation Links** — Hyperlink every claim to its source URL
 
 ### 🌟 Long-Term
-- [ ] **Multi-Language Output** — Generate briefings in French, German, Japanese via LLM translation layer
-- [ ] **Slack / Teams Integration** — Webhook delivery of briefings directly to workspace channels
-- [ ] **Agent Fine-Tuning** — Fine-tune writer agent on a corpus of McKinsey/BCG report style data
-- [ ] **Streaming Token Display** — Show LLM token output character-by-character as Agent 3 writes
+- [ ] **Multi-Language Output** — Briefings in French, German, Japanese
+- [ ] **Slack / Teams Integration** — Webhook delivery to workspace channels
+- [ ] **Streaming Token Display** — Character-by-character output as Agent 3 writes
 
 ---
 
@@ -286,9 +282,9 @@ Set these in **Vercel Dashboard → Project → Settings → Environment Variabl
 | Styling | Tailwind CSS 3 + Custom CSS |
 | Markdown Rendering | react-markdown + remark-gfm + rehype-highlight |
 | SSE Client | eventsource-parser |
-| Agent Orchestration | CrewAI 0.30 |
+| Agent Orchestration | CrewAI 1.14 |
 | Backend Framework | FastAPI 0.111 |
-| LLM Provider | OpenAI GPT-4o-mini |
+| LLM Provider | Groq (Llama 3.1 8B Instant) — free tier |
 | Search Tool | Serper API (SerperDevTool) |
 | Streaming | Server-Sent Events (SSE) |
 | Deployment | Vercel (Node + Python runtimes) |
@@ -302,5 +298,5 @@ MIT © [Shriyanshu2004](https://github.com/Shriyanshu2004)
 ---
 
 <div align="center">
-  <sub>Built with ❤️ using CrewAI, Next.js, FastAPI, and OpenAI</sub>
+  <sub>Built with ❤️ using CrewAI, Next.js, FastAPI, and Groq</sub>
 </div>

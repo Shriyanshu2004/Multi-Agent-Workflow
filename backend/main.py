@@ -8,17 +8,43 @@ from __future__ import annotations
 
 import json
 import os
-from typing import AsyncGenerator
+
+# Must be set before litellm is imported anywhere
+os.environ["LITELLM_DROP_PARAMS"] = "True"
 
 from dotenv import load_dotenv
+load_dotenv()
+
+# Patch litellm to strip cache_breakpoint from messages (unsupported by Groq)
+try:
+    import litellm
+    litellm.drop_params = True
+
+    _original_completion = litellm.completion
+
+    def _patched_completion(*args, **kwargs):
+        messages = kwargs.get("messages", [])
+        for msg in messages:
+            msg.pop("cache_breakpoint", None)
+            if isinstance(msg.get("content"), list):
+                for block in msg["content"]:
+                    if isinstance(block, dict):
+                        block.pop("cache_breakpoint", None)
+        kwargs["messages"] = messages
+        return _original_completion(*args, **kwargs)
+
+    litellm.completion = _patched_completion
+except Exception:
+    pass
+
+from typing import AsyncGenerator
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-load_dotenv()
-
-from crew import run_research_stream  # noqa: E402  (needs env loaded first)
+from crew import run_research_stream  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # App setup

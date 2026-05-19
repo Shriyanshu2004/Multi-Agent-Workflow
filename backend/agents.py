@@ -34,23 +34,20 @@ def web_scraper_agent() -> Agent:
     return Agent(
         role="Senior Research Analyst",
         goal=(
-            "Conduct exhaustive, multi-angle web searches to gather the most "
-            "recent and credible data, statistics, expert opinions, and news "
-            "about the given research topic. Prioritise sources published in "
-            "the last 12 months. Retrieve at least 8 distinct data points."
+            "Search the web to gather the most recent and credible data, "
+            "statistics, expert opinions, and news about the given research "
+            "topic. Retrieve at least 5 distinct data points with sources."
         ),
         backstory=(
-            "You are a veteran intelligence analyst who spent 15 years at a "
-            "top-tier geopolitical research firm. You have an uncanny ability "
-            "to cut through noise and surface only the highest-signal "
-            "information. You are methodical, cite sources, and never "
-            "fabricate data."
+            "You are a veteran intelligence analyst skilled at finding "
+            "high-signal information quickly. You are methodical, cite "
+            "sources, and never fabricate data."
         ),
         tools=[search_tool],
         llm=_build_llm(),
         verbose=True,
         allow_delegation=False,
-        max_iter=5,
+        max_iter=3,
     )
 
 
@@ -62,25 +59,19 @@ def synthesizer_agent() -> Agent:
     return Agent(
         role="Intelligence Analyst",
         goal=(
-            "Analyse the raw research data provided by the Web Intelligence "
-            "Gatherer. Extract the top 5–7 key trends, cross-reference facts "
-            "across multiple sources to validate them, eliminate duplicate or "
-            "low-quality information, and produce a structured analytical "
-            "summary with clearly delineated insights, supporting evidence, "
-            "and confidence levels (High / Medium / Low)."
+            "Analyse the raw research data. Extract the top 4-5 key trends, "
+            "cross-reference facts, and produce a structured analytical "
+            "summary with insights and confidence levels (High/Medium/Low)."
         ),
         backstory=(
-            "You are a data scientist turned strategic analyst. You have "
-            "published peer-reviewed papers on information extraction and "
-            "text synthesis. You are known for turning a mountain of raw data "
-            "into laser-focused insights that executives act on. You are "
-            "rigorous, structured, and allergic to vague language."
+            "You are a strategic analyst known for turning raw data into "
+            "focused insights. You are rigorous, structured, and concise."
         ),
         tools=[],
         llm=_build_llm(),
         verbose=True,
         allow_delegation=False,
-        max_iter=3,
+        max_iter=2,
     )
 
 
@@ -92,26 +83,19 @@ def executive_writer_agent() -> Agent:
     return Agent(
         role="Corporate Communications Director",
         goal=(
-            "Transform the structured analytical summary into a polished, "
-            "professional Corporate Intelligence Briefing in Markdown format. "
-            "The document must include: an Executive Summary, Key Findings "
-            "(with bullet points and sub-bullets), Market Trends section, "
-            "Strategic Implications, Risk Factors, and a Forward Outlook. "
-            "Use bold headings, horizontal rules, emoji section markers, and "
-            "structured tables where appropriate. The tone must be confident, "
-            "concise, and boardroom-ready."
+            "Transform the analytical summary into a polished Corporate "
+            "Intelligence Briefing in Markdown. Include: Executive Summary, "
+            "Key Findings, Market Trends, Strategic Implications, Risk "
+            "Factors, and Forward Outlook. Use bold headings and bullet points."
         ),
         backstory=(
-            "You are a former McKinsey engagement manager turned Chief "
-            "Communications Officer for a Fortune 100 company. You have "
-            "written briefings that shaped billion-dollar strategic decisions. "
-            "Your documents are models of clarity — every word earns its "
-            "place, every section flows into the next, and the reader always "
-            "leaves knowing exactly what to think and do next."
+            "You are a Chief Communications Officer who writes clear, "
+            "concise briefings that shape strategic decisions. Every word "
+            "earns its place."
         ),
         tools=[],
         llm=_build_llm(),
         verbose=True,
         allow_delegation=False,
-        max_iter=3,
+        max_iter=2,
     )

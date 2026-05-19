@@ -18,8 +18,8 @@ from tools import search_tool
 # LLM configuration — shared across all agents
 # ---------------------------------------------------------------------------
 def _build_llm() -> LLM:
-    model = os.getenv("LLM_MODEL_NAME", "gemini/gemini-1.5-flash")
-    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "2048"))
+    model = os.getenv("LLM_MODEL_NAME", "groq/llama-3.3-70b-versatile")
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1024"))
     return LLM(
         model=model,
         temperature=0.3,

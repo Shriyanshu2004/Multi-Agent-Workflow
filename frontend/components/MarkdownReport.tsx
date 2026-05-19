@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
-import { Copy, Check, Download, FileText } from "lucide-react";
+import { Copy, Check, Download, FileText, FileDown } from "lucide-react";
 import clsx from "clsx";
 
 interface MarkdownReportProps {
@@ -26,7 +26,7 @@ export default function MarkdownReport({ report, tokenUsage }: MarkdownReportPro
     }
   }, [report]);
 
-  const handleDownload = useCallback(() => {
+  const handleDownloadMd = useCallback(() => {
     const blob = new Blob([report], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -34,6 +34,44 @@ export default function MarkdownReport({ report, tokenUsage }: MarkdownReportPro
     a.download = `intelligence-briefing-${Date.now()}.md`;
     a.click();
     URL.revokeObjectURL(url);
+  }, [report]);
+
+  const handleDownloadPdf = useCallback(() => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Intelligence Briefing</title>
+          <style>
+            body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; line-height: 1.6; }
+            h1 { font-size: 2em; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            h2 { font-size: 1.4em; margin-top: 2em; color: #222; border-bottom: 1px solid #ccc; padding-bottom: 6px; }
+            h3 { font-size: 1.1em; color: #333; }
+            table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+            th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+            th { background: #f5f5f5; font-weight: bold; }
+            code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+            pre { background: #f4f4f4; padding: 16px; border-radius: 6px; overflow-x: auto; }
+            blockquote { border-left: 4px solid #ccc; margin: 0; padding-left: 16px; color: #555; }
+            hr { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+            ul, ol { padding-left: 1.5em; }
+            @media print { body { margin: 20px; } }
+          </style>
+        </head>
+        <body>
+          <div id="content"></div>
+          <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
+          <script>
+            document.getElementById('content').innerHTML = marked.parse(${JSON.stringify(report)});
+            setTimeout(() => { window.print(); window.close(); }, 500);
+          <\/script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   }, [report]);
 
   const wordCount = report.split(/\s+/).filter(Boolean).length;
@@ -59,7 +97,6 @@ export default function MarkdownReport({ report, tokenUsage }: MarkdownReportPro
 
         <div className="flex items-center gap-2">
           <button
-            id="copy-report-btn"
             onClick={handleCopy}
             className={clsx(
               "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200",
@@ -74,13 +111,21 @@ export default function MarkdownReport({ report, tokenUsage }: MarkdownReportPro
           </button>
 
           <button
-            id="download-report-btn"
-            onClick={handleDownload}
+            onClick={handleDownloadMd}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-white/5 text-slate-400 border border-white/[0.07] hover:bg-white/10 hover:text-white transition-all duration-200"
             title="Download as Markdown"
           >
             <Download size={13} />
-            Download
+            .md
+          </button>
+
+          <button
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-brand-500/20 text-brand-400 border border-brand-500/30 hover:bg-brand-500/30 hover:text-white transition-all duration-200"
+            title="Download as PDF"
+          >
+            <FileDown size={13} />
+            PDF
           </button>
         </div>
       </div>
@@ -92,7 +137,6 @@ export default function MarkdownReport({ report, tokenUsage }: MarkdownReportPro
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight, rehypeRaw]}
             components={{
-              // Custom link renderer — opens in new tab
               a: ({ href, children, ...props }) => (
                 <a
                   href={href}
@@ -104,7 +148,6 @@ export default function MarkdownReport({ report, tokenUsage }: MarkdownReportPro
                   {children}
                 </a>
               ),
-              // Wrap tables in overflow container
               table: ({ children, ...props }) => (
                 <div className="overflow-x-auto rounded-lg">
                   <table {...props}>{children}</table>

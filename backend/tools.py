@@ -37,4 +37,4 @@ def get_search_tool(n_results: int = 10) -> SerperDevTool:
 # ---------------------------------------------------------------------------
 # Export a singleton for convenience
 # ---------------------------------------------------------------------------
-search_tool = get_search_tool(n_results=10)
+search_tool = get_search_tool(n_results=3)

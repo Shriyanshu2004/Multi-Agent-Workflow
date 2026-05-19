@@ -1,24 +1,24 @@
+# ─── Python version required: 3.10–3.13 (use: py -3.13 -m venv .venv) ───────
+
 # ─── Core Web Framework ──────────────────────────────────────────────────────
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
-python-multipart==0.0.9
-starlette==0.37.2
+fastapi>=0.111.0,<0.116.0
+uvicorn[standard]>=0.29.0,<0.35.0
+python-multipart>=0.0.9
+starlette>=0.37.2,<0.42.0
 
-# ─── CrewAI & Agent Tooling ───────────────────────────────────────────────────
-crewai==0.30.11
-crewai-tools==0.4.6
+# ─── CrewAI 1.x — pinned exact version ───────────────────────────────────────
+# CrewAI 1.14.5 requires openai>=2.30.0 (OpenAI SDK v2)
+crewai==1.14.5
+crewai-tools==1.14.5
 
-# ─── LLM Provider ────────────────────────────────────────────────────────────
-openai==1.30.5
-langchain-openai==0.1.8
-langchain==0.2.1
+# ─── OpenAI SDK v2 (required by crewai 1.14.5) ───────────────────────────────
+openai>=2.30.0,<3.0.0
 
 # ─── Search Tool ─────────────────────────────────────────────────────────────
-google-search-results==2.4.2   # SerpAPI client
+google-search-results>=2.4.2,<3.0.0
 
 # ─── Utilities ───────────────────────────────────────────────────────────────
-python-dotenv==1.0.1
-pydantic==2.7.1
-pydantic-settings==2.2.1
-httpx==0.27.0
-sse-starlette==2.1.0
+python-dotenv>=1.0.1,<2.0.0
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.2.0,<3.0.0
+sse-starlette>=2.1.0,<3.0.0

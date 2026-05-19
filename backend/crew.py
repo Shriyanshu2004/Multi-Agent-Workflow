@@ -1,7 +1,12 @@
 """
-crew.py — Crew Assembly & Async Execution
+crew.py — Crew Assembly & Async Execution (CrewAI 1.x)
 Assembles the three agents into a sequential CrewAI Crew and provides
 an async generator that streams agent-status events as SSE-friendly dicts.
+
+CrewAI 1.x changes:
+  - crew.kickoff() returns a CrewOutput object with .raw attribute
+  - step_callback receives a TaskOutput object
+  - Process enum is still available the same way
 """
 from __future__ import annotations
 
@@ -43,8 +48,8 @@ def _build_crew(topic: str) -> tuple[Crew, list[Any]]:
         tasks=tasks,
         process=Process.sequential,
         verbose=True,
-        memory=False,           # keep stateless for serverless deployments
-        max_rpm=10,             # respect OpenAI rate limits
+        memory=False,
+        max_rpm=10,
     )
     return crew, tasks
 
@@ -57,80 +62,72 @@ async def run_research_stream(
 ) -> AsyncGenerator[dict, None]:
     """
     Async generator that:
-      1. Emits an `agent_start` event for each agent before it runs.
-      2. Runs the CrewAI crew in a thread-pool so it doesn't block the loop.
-      3. Emits an `agent_done` event after each agent finishes.
-      4. Emits a final `complete` event with the full markdown report.
-      5. Emits an `error` event if anything goes wrong.
+      1. Emits status/agent events before and after the crew runs.
+      2. Runs the CrewAI crew in a thread-pool (blocking I/O).
+      3. Emits a final `complete` event with the full markdown report.
+      4. Emits an `error` event if anything goes wrong.
     """
     loop = asyncio.get_event_loop()
 
     try:
         crew, tasks = _build_crew(topic)
 
-        # We run each task individually so we can emit per-agent events.
-        # CrewAI's sequential process handles context passing automatically
-        # when we kick off the full crew; for fine-grained progress we
-        # instead run the crew once but intercept via step callbacks.
-
         # ── Emit initial status ──────────────────────────────────────
         yield {
             "type": "status",
             "message": f'Research crew initialised for topic: "{topic}"',
         }
+        await asyncio.sleep(0.1)
 
-        # ── Run crew in thread-pool (blocking I/O) ───────────────────
-        # We simulate per-agent progress by yielding events before and
-        # after the (blocking) crew.kickoff() call.  For true streaming,
-        # CrewAI's step_callback is used below.
+        # ── Track completed task count via step_callback ─────────────
+        completed: list[int] = []
 
-        results: list[str] = []
-        current_agent_index = {"value": 0}
+        def step_callback(task_output: Any) -> None:
+            idx = len(completed)
+            completed.append(idx)
 
-        def step_callback(step_output: Any) -> None:
-            """Called by CrewAI after each agent completes its task."""
-            idx = current_agent_index["value"]
-            results.append(str(step_output))
-            current_agent_index["value"] = idx + 1
+        crew.task_callback = step_callback  # type: ignore[attr-defined]
 
-        crew.step_callback = step_callback  # type: ignore[attr-defined]
-
-        # ── Agent 1 — announce ───────────────────────────────────────
+        # ── Announce Agent 1 starting ────────────────────────────────
         yield {"type": "agent_start", **AGENT_LABELS[0]}
-        await asyncio.sleep(0.1)   # allow SSE flush
+        await asyncio.sleep(0.05)
 
-        # ── Kick off crew (runs all 3 agents sequentially) ───────────
+        # ── Run crew in thread-pool ──────────────────────────────────
         crew_result = await loop.run_in_executor(
-            None,                  # default thread-pool
+            None,
             lambda: crew.kickoff(inputs={"topic": topic}),
         )
 
-        # ── Emit agent 2 & 3 progress (post-hoc, best-effort) ───────
-        # In a real CrewAI v0.30 integration the step_callback fires
-        # synchronously inside the executor thread, so we parse results.
-        for i in range(1, 3):
-            yield {"type": "agent_done", **AGENT_LABELS[i - 1]}
-            await asyncio.sleep(0.05)
-            yield {"type": "agent_start", **AGENT_LABELS[i]}
-            await asyncio.sleep(0.05)
+        # ── Emit completion for agents 1→3 ───────────────────────────
+        yield {"type": "agent_done", **AGENT_LABELS[0]}
+        await asyncio.sleep(0.05)
 
+        yield {"type": "agent_start", **AGENT_LABELS[1]}
+        await asyncio.sleep(0.05)
+        yield {"type": "agent_done", **AGENT_LABELS[1]}
+        await asyncio.sleep(0.05)
+
+        yield {"type": "agent_start", **AGENT_LABELS[2]}
+        await asyncio.sleep(0.05)
         yield {"type": "agent_done", **AGENT_LABELS[2]}
 
-        # ── Final result ─────────────────────────────────────────────
-        final_report = (
-            crew_result.raw
-            if hasattr(crew_result, "raw")
-            else str(crew_result)
-        )
+        # ── Extract final report ─────────────────────────────────────
+        # CrewAI 1.x: CrewOutput.raw contains the last task's string output
+        if hasattr(crew_result, "raw"):
+            final_report = crew_result.raw
+        else:
+            final_report = str(crew_result)
+
+        # ── Token usage (available in 1.x via usage_metrics) ─────────
+        token_usage: dict = {}
+        if hasattr(crew_result, "usage_metrics") and crew_result.usage_metrics:
+            um = crew_result.usage_metrics
+            token_usage = um if isinstance(um, dict) else vars(um)
 
         yield {
             "type": "complete",
             "report": final_report,
-            "token_usage": (
-                crew_result.token_usage.__dict__
-                if hasattr(crew_result, "token_usage")
-                else {}
-            ),
+            "token_usage": token_usage,
         }
 
     except Exception as exc:  # noqa: BLE001

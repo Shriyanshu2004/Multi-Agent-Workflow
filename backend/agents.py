@@ -1,24 +1,26 @@
 """
-agents.py — CrewAI Agent Definitions
+agents.py — CrewAI 1.x Agent Definitions
 Three specialized agents working sequentially:
   1. Web Intelligence Gatherer  → searches the web via Serper
   2. Data Synthesizer           → analyzes and structures raw results
   3. Executive Writer           → produces the final markdown briefing
+
+CrewAI 1.x uses its own LLM class with provider/model strings.
 """
 from __future__ import annotations
 
 import os
-from crewai import Agent
-from langchain_openai import ChatOpenAI
+from crewai import Agent, LLM
 from tools import search_tool
+
 
 # ---------------------------------------------------------------------------
 # LLM configuration — shared across all agents
 # ---------------------------------------------------------------------------
-def _build_llm() -> ChatOpenAI:
+def _build_llm() -> LLM:
     model = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
-    return ChatOpenAI(
-        model=model,
+    return LLM(
+        model=f"openai/{model}",
         temperature=0.3,
         max_tokens=4096,
     )
@@ -28,10 +30,7 @@ def _build_llm() -> ChatOpenAI:
 # Agent 1 — Web Intelligence Gatherer
 # ---------------------------------------------------------------------------
 def web_scraper_agent() -> Agent:
-    """
-    Senior Research Analyst who trawls the web for the freshest, most
-    authoritative information on a given topic.
-    """
+    """Senior Research Analyst who trawls the web for authoritative information."""
     return Agent(
         role="Senior Research Analyst",
         goal=(
@@ -59,10 +58,7 @@ def web_scraper_agent() -> Agent:
 # Agent 2 — Data Synthesizer
 # ---------------------------------------------------------------------------
 def synthesizer_agent() -> Agent:
-    """
-    Intelligence Analyst who transforms raw, noisy search results into a
-    clean, structured analytical summary.
-    """
+    """Intelligence Analyst who transforms raw search results into structured insights."""
     return Agent(
         role="Intelligence Analyst",
         goal=(
@@ -80,7 +76,7 @@ def synthesizer_agent() -> Agent:
             "into laser-focused insights that executives act on. You are "
             "rigorous, structured, and allergic to vague language."
         ),
-        tools=[],            # Synthesizer works purely on provided context
+        tools=[],
         llm=_build_llm(),
         verbose=True,
         allow_delegation=False,
@@ -92,10 +88,7 @@ def synthesizer_agent() -> Agent:
 # Agent 3 — Executive Writer
 # ---------------------------------------------------------------------------
 def executive_writer_agent() -> Agent:
-    """
-    Corporate Communications Director who turns analytical summaries into
-    beautifully formatted executive briefings.
-    """
+    """Corporate Communications Director who writes boardroom-ready briefings."""
     return Agent(
         role="Corporate Communications Director",
         goal=(
@@ -116,7 +109,7 @@ def executive_writer_agent() -> Agent:
             "place, every section flows into the next, and the reader always "
             "leaves knowing exactly what to think and do next."
         ),
-        tools=[],            # Writer works purely on provided context
+        tools=[],
         llm=_build_llm(),
         verbose=True,
         allow_delegation=False,

@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import ResearchForm from "@/components/ResearchForm";
 import AgentStatusPanel from "@/components/AgentStatusPanel";
 import MarkdownReport from "@/components/MarkdownReport";
+import ResearchHistory, { saveToHistory, type HistoryEntry } from "@/components/ResearchHistory";
 import type { ResearchEvent, AgentInfo, ResearchPhase } from "@/lib/types";
 import { AlertCircle, RefreshCw, Zap, GitCompare } from "lucide-react";
 
@@ -122,6 +123,7 @@ export default function HomePage() {
   const [agentsRight, setAgentsRight] = useState<AgentInfo[]>(INITIAL_AGENTS);
   const [statusMessage, setStatusMessage] = useState("");
   const [report, setReport] = useState<string | null>(null);
+  const [currentTopic, setCurrentTopic] = useState<string>("");
   const [reportLeft, setReportLeft] = useState<string | null>(null);
   const [reportRight, setReportRight] = useState<string | null>(null);
   const [topic1, setTopic1] = useState("");
@@ -177,6 +179,8 @@ export default function HomePage() {
           setTokenUsage(event.token_usage ?? {});
           setPhase("complete");
           setAgents((prev) => prev.map((a) => ({ ...a, status: "done" })));
+          // Save to history
+          if (currentTopic) saveToHistory(currentTopic, event.report);
         }
         break;
       case "error":
@@ -221,6 +225,7 @@ export default function HomePage() {
 
   const handleSingleSubmit = useCallback(async (topic: string) => {
     reset();
+    setCurrentTopic(topic);
     await new Promise((r) => setTimeout(r, 50));
     setPhase("running");
     setAgents(INITIAL_AGENTS);
@@ -260,6 +265,14 @@ export default function HomePage() {
     }
   }, [reset, streamSSE, handleEvent]);
 
+  const handleRestoreHistory = useCallback((entry: HistoryEntry) => {
+    reset();
+    setCurrentTopic(entry.topic);
+    setReport(entry.report);
+    setPhase("complete");
+    setAgents((prev) => prev.map((a) => ({ ...a, status: "done" })));
+  }, [reset]);
+
   const isLoading = phase === "running";
   const isCompareComplete = mode === "compare" && phase === "complete" && reportLeft && reportRight;
 
@@ -276,6 +289,8 @@ export default function HomePage() {
               <span>ResearchAI</span>
             </div>
             <div className="flex items-center gap-3">
+              {/* History */}
+              <ResearchHistory onRestore={handleRestoreHistory} />
               {/* Mode toggle */}
               <div className="flex items-center gap-1 p-1 rounded-lg bg-white/5 border border-white/[0.07]">
                 <button onClick={() => { reset(); setMode("single"); }}

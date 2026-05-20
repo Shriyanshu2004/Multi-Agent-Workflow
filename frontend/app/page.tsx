@@ -115,6 +115,38 @@ function CompareReports({ report1, report2, topic1, topic2 }: { report1: string;
   );
 }
 
+// ── SSE streaming helper (outside component — async generators can't use useCallback) ──
+async function* streamSSE(url: string, body: object, signal: AbortSignal): AsyncGenerator<ResearchEvent> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? `HTTP ${res.status}`);
+  }
+  if (!res.body) throw new Error("No response body.");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const data = line.slice(6).trim();
+        if (!data) continue;
+        try { yield JSON.parse(data) as ResearchEvent; } catch { /* ignore */ }
+      }
+    }
+  }
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const [mode, setMode] = useState<"single" | "compare">("single");
@@ -191,38 +223,6 @@ export default function HomePage() {
     }
   }, [updateAgent, addThought]);
 
-  const streamSSE = useCallback(async (url: string, body: object, signal: AbortSignal) => {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal,
-    });
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      throw new Error(json.error ?? `HTTP ${res.status}`);
-    }
-    if (!res.body) throw new Error("No response body.");
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6).trim();
-          if (!data) continue;
-          try { yield JSON.parse(data) as ResearchEvent; } catch { /* ignore */ }
-        }
-      }
-    }
-  }, []);
-
   const handleSingleSubmit = useCallback(async (topic: string) => {
     reset();
     setCurrentTopic(topic);
@@ -240,7 +240,7 @@ export default function HomePage() {
       setErrorMessage(err instanceof Error ? err.message : "Unknown error");
       setPhase("error");
     }
-  }, [reset, streamSSE, handleEvent]);
+  }, [reset, handleEvent]);
 
   const handleCompareSubmit = useCallback(async (t1: string, t2: string) => {
     reset();
@@ -263,7 +263,7 @@ export default function HomePage() {
       setErrorMessage(err instanceof Error ? err.message : "Unknown error");
       setPhase("error");
     }
-  }, [reset, streamSSE, handleEvent]);
+  }, [reset, handleEvent]);
 
   const handleRestoreHistory = useCallback((entry: HistoryEntry) => {
     reset();

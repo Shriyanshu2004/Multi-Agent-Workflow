@@ -1,6 +1,6 @@
 /** types.ts — Shared TypeScript type definitions */
 
-// ─── SSE Event types (mirroring backend event shapes) ────────────────────────
+// ─── SSE Event types ──────────────────────────────────────────────────────────
 
 export type AgentId = "scraper" | "synthesizer" | "writer";
 export type AgentStatus = "pending" | "active" | "done" | "error";
@@ -24,6 +24,12 @@ export interface AgentDoneEvent {
   description: string;
 }
 
+export interface ThoughtEvent {
+  type: "thought";
+  agent_id: AgentId;
+  text: string;
+}
+
 export interface CompleteEvent {
   type: "complete";
   report: string;
@@ -43,6 +49,7 @@ export type ResearchEvent =
   | StatusEvent
   | AgentStartEvent
   | AgentDoneEvent
+  | ThoughtEvent
   | CompleteEvent
   | ErrorEvent
   | StreamEndEvent;
@@ -54,13 +61,10 @@ export interface AgentInfo {
   label: string;
   description: string;
   status: AgentStatus;
+  thoughts: string[];
 }
 
-export type ResearchPhase =
-  | "idle"
-  | "running"
-  | "complete"
-  | "error";
+export type ResearchPhase = "idle" | "running" | "complete" | "error";
 
 export interface ResearchState {
   phase: ResearchPhase;

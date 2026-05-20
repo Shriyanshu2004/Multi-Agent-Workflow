@@ -44,7 +44,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from crew import run_research_stream  # noqa: E402
+from crew import run_research_stream, run_comparison_stream  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -80,13 +80,12 @@ app.add_middleware(
 # Request / Response schemas
 # ---------------------------------------------------------------------------
 class ResearchRequest(BaseModel):
-    topic: str = Field(
-        ...,
-        min_length=3,
-        max_length=300,
-        description="The research topic or industry to investigate.",
-        examples=["AI in Healthcare 2025"],
-    )
+    topic: str = Field(..., min_length=3, max_length=300, description="The research topic.", examples=["AI in Healthcare 2025"])
+
+
+class CompareRequest(BaseModel):
+    topic1: str = Field(..., min_length=3, max_length=300, description="First topic to compare.")
+    topic2: str = Field(..., min_length=3, max_length=300, description="Second topic to compare.")
 
 
 # ---------------------------------------------------------------------------
@@ -114,39 +113,34 @@ async def health_check() -> dict:
     return {"status": "ok", "service": "multi-agent-research-api"}
 
 
-@app.post(
-    "/api/research",
-    summary="Start a research run (SSE stream)",
-    response_description="Server-Sent Events stream of agent progress and final report",
-    tags=["research"],
-)
+@app.post("/api/research", summary="Start a research run (SSE stream)", tags=["research"])
 async def start_research(request: ResearchRequest) -> StreamingResponse:
-    """
-    Kick off the 3-agent CrewAI pipeline for the given **topic**.
-
-    The response is a `text/event-stream` (SSE) with JSON payloads:
-
-    | `type`        | Fields                                   |
-    |---------------|------------------------------------------|
-    | `status`      | `message`                                |
-    | `agent_start` | `id`, `label`, `description`             |
-    | `agent_done`  | `id`, `label`, `description`             |
-    | `complete`    | `report` (Markdown string), `token_usage`|
-    | `error`       | `message`                                |
-    | `stream_end`  | *(sentinel — no additional fields)*      |
-    """
     topic = request.topic.strip()
     if not topic:
         raise HTTPException(status_code=422, detail="Topic cannot be empty.")
-
     return StreamingResponse(
         _event_generator(topic),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",   # disable Nginx/proxy buffering
-            "Connection": "keep-alive",
-        },
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+    )
+
+
+async def _compare_generator(topic1: str, topic2: str) -> AsyncGenerator[str, None]:
+    async for event in run_comparison_stream(topic1, topic2):
+        yield _sse_event(event)
+    yield _sse_event({"type": "stream_end"})
+
+
+@app.post("/api/compare", summary="Compare two topics side-by-side (SSE stream)", tags=["research"])
+async def compare_topics(request: CompareRequest) -> StreamingResponse:
+    topic1 = request.topic1.strip()
+    topic2 = request.topic2.strip()
+    if not topic1 or not topic2:
+        raise HTTPException(status_code=422, detail="Both topics are required.")
+    return StreamingResponse(
+        _compare_generator(topic1, topic2),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
     )
 
 

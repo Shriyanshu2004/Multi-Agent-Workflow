@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: multi-agent-research-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: LLM_MODEL_NAME
+        value: groq/llama-3.3-70b-versatile
+      - key: LLM_MAX_TOKENS
+        value: "1024"
+      - key: LITELLM_DROP_PARAMS
+        value: "True"
+      - key: ALLOWED_ORIGINS
+        value: https://multi-agent-workflow-ukiq.vercel.app
+      - key: BACKEND_PORT
+        value: "8000"
+
+    healthCheckPath: /health

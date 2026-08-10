@@ -9,8 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy app code
 COPY . .
 
-# Expose port
-EXPOSE 8000
+# Render provides PORT dynamically — expose it
+EXPOSE $PORT
 
-# Start server
+# Start server — main.py reads PORT from env (defaults to 8000)
 CMD ["python", "main.py"]
